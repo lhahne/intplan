@@ -6,4 +6,6 @@ export type Equipment =
   | "kettlebell"
   | "resistance_bands"
   | "bench"
+  | "sandbag"
+  | "battle_rope"
   | "gym_full";

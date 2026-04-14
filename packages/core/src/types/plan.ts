@@ -29,6 +29,8 @@ export interface TrainingDay {
   type: "training" | "active_recovery" | "rest";
   focus?: string;
   sessions: TrainingSession[];
+  /** Optional light activity suggestion for recovery days */
+  suggestion?: string;
 }
 
 export interface WeekPlan {

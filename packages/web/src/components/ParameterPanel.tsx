@@ -23,6 +23,8 @@ const equipmentOptions: { value: Equipment; label: string }[] = [
   { value: "kettlebell", label: "Kettlebell" },
   { value: "resistance_bands", label: "Resistance bands" },
   { value: "bench", label: "Bench" },
+  { value: "sandbag", label: "Sandbag" },
+  { value: "battle_rope", label: "Battle rope" },
   { value: "gym_full", label: "Full gym" },
 ];
 

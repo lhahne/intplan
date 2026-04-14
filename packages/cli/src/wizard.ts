@@ -56,6 +56,8 @@ export async function runWizard(): Promise<UserProfile> {
       { name: "Kettlebell", value: "kettlebell" },
       { name: "Resistance bands", value: "resistance_bands" },
       { name: "Bench", value: "bench" },
+      { name: "Sandbag", value: "sandbag" },
+      { name: "Battle rope", value: "battle_rope" },
       { name: "Full gym access", value: "gym_full" },
     ],
   });

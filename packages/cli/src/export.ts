@@ -30,7 +30,10 @@ function formatDayMd(day: TrainingDay): string {
   const dayName = dayNames[day.dayOfWeek] ?? "???";
 
   if (day.type === "rest") return `| ${dayName} | REST | |`;
-  if (day.type === "active_recovery") return `| ${dayName} | Active Recovery | |`;
+  if (day.type === "active_recovery") {
+    const suggestion = day.suggestion ? day.suggestion : "";
+    return `| ${dayName} | Active Recovery | ${suggestion} |`;
+  }
 
   const exercises = day.sessions.flatMap((s) =>
     s.exercises.map(formatExerciseMd),

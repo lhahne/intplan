@@ -44,6 +44,9 @@ function DayBox({ day }: { day: TrainingDay }) {
       <div className="day-box recovery">
         <span className="day-name">{name}</span>
         <span className="day-type-label">Recovery</span>
+        {day.suggestion && (
+          <span className="day-suggestion">{day.suggestion}</span>
+        )}
       </div>
     );
   }

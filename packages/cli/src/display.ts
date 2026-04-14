@@ -88,7 +88,8 @@ function formatDay(day: TrainingDay): string {
     return `  ${dim}${dayName}  REST${reset}`;
   }
   if (day.type === "active_recovery") {
-    return `  ${dim}${dayName}  Active Recovery${reset}`;
+    const suggestion = day.suggestion ? ` — ${day.suggestion}` : "";
+    return `  ${dim}${dayName}  Active Recovery${suggestion}${reset}`;
   }
 
   const exercises = day.sessions.flatMap((s) =>

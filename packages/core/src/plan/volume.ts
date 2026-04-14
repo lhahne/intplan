@@ -95,12 +95,16 @@ export function computeTrainingDays(
 
 /**
  * Convert category emphasis into session counts for the week.
- * Each training day gets 1-2 sessions (categories).
- * Returns how many sessions of each category to include this week.
+ * Uses a rotating guarantee system so that every category with
+ * non-zero emphasis gets at least one session every N weeks,
+ * even if its emphasis is too small for a session every week.
+ *
+ * @param weekNumber - Used to rotate which minor categories get a slot this week
  */
 export function allocateSessions(
   emphasis: CategoryEmphasis,
   trainingDays: number,
+  weekNumber: number = 1,
 ): Record<ExerciseCategory, number> {
   // Total session slots: each day ~1.5 sessions average
   const totalSlots = Math.round(trainingDays * 1.5);
@@ -108,10 +112,30 @@ export function allocateSessions(
   const raw = {} as Record<ExerciseCategory, number>;
   let assigned = 0;
 
-  // First pass: floor allocation
+  // First pass: floor allocation for categories with enough emphasis
   for (const cat of ALL_CATEGORIES) {
     raw[cat] = Math.floor(emphasis[cat] * totalSlots);
     assigned += raw[cat];
+  }
+
+  // Second pass: categories with non-zero emphasis but 0 sessions get
+  // a rotating slot. Each such category appears every few weeks.
+  const minorCategories = ALL_CATEGORIES.filter(
+    (cat) => raw[cat] === 0 && emphasis[cat] > 0.02,
+  );
+
+  if (minorCategories.length > 0 && assigned < totalSlots) {
+    // Cycle through minor categories across weeks so each gets regular coverage
+    const slotsForMinor = Math.min(
+      totalSlots - assigned,
+      Math.max(1, Math.floor(minorCategories.length / 2)),
+    );
+
+    for (let i = 0; i < slotsForMinor; i++) {
+      const idx = (weekNumber + i) % minorCategories.length;
+      raw[minorCategories[idx]!]++;
+      assigned++;
+    }
   }
 
   // Distribute remaining slots to highest-emphasis categories
@@ -122,10 +146,9 @@ export function allocateSessions(
     raw[sorted[i]!]++;
   }
 
-  // Ensure at least one aerobic and one strength session per week
+  // Ensure at least one aerobic or interval session per week
   if (raw.aerobic_base === 0 && raw.interval_speed === 0) {
     raw.aerobic_base = 1;
-    // Remove from lowest priority
     const lowest = sorted[sorted.length - 1]!;
     if (raw[lowest] > 0) raw[lowest]--;
   }

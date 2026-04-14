@@ -43,7 +43,7 @@ function buildWeek(
   weekNum: number,
   totalWeeks: number,
   macrocycles: Macrocycle[],
-  baseEmphasis: ReturnType<typeof analyzeGaps>,
+  targetCpfi: ReturnType<typeof getCpfiTarget>,
   weakestComponents: ReturnType<typeof findWeakestComponents>,
   fitnessCategory: ReturnType<typeof calculateCpfi>["category"],
 ): WeekPlan {
@@ -71,11 +71,12 @@ function buildWeek(
     isDeload,
   );
 
-  // Weekly emphasis
-  const emphasis = weeklyEmphasis(baseEmphasis, phase);
+  // Recompute gap emphasis with phase context (peaking gets more test-specific)
+  const phaseEmphasis = analyzeGaps(resolved.currentFitness, targetCpfi, phase);
+  const emphasis = weeklyEmphasis(phaseEmphasis, phase);
 
   // Session allocation based on this week's actual training days
-  const sessionCounts = allocateSessions(emphasis, trainingDayCount);
+  const sessionCounts = allocateSessions(emphasis, trainingDayCount, weekNum);
 
   // Build one session per category slot
   const sessionPool: TrainingSession[] = [];
@@ -168,7 +169,17 @@ function buildWeek(
     }
   }
 
+  // Light activity suggestions for recovery days — rotate through these
+  const recoverySuggestions = [
+    "20-30 min easy walk",
+    "Light stretching or yoga",
+    "15-20 min walk + foam rolling",
+    "Easy swim or cycling (low effort)",
+    "20 min walk in nature",
+  ];
+
   // Build all 7 days of the week
+  let recoveryDayCount = 0;
   for (let dow = 0; dow < 7; dow++) {
     const trainingDayIdx = trainingDays.indexOf(dow);
 
@@ -182,9 +193,20 @@ function buildWeek(
         sessions,
       });
     } else if (dow === 6) {
+      // Sunday: always full rest, no suggestion
       days.push({ dayOfWeek: dow, type: "rest", sessions: [] });
     } else if (!trainingDays.includes(dow)) {
-      days.push({ dayOfWeek: dow, type: "active_recovery", sessions: [] });
+      // Recovery day — add a light suggestion to roughly half of them
+      // Use week + dow to create a stable but varied pattern
+      const suggestionIdx = (weekNum + dow) % recoverySuggestions.length;
+      const addSuggestion = (weekNum + dow) % 3 !== 0; // skip ~1 in 3
+      days.push({
+        dayOfWeek: dow,
+        type: "active_recovery",
+        sessions: [],
+        suggestion: addSuggestion ? recoverySuggestions[suggestionIdx] : undefined,
+      });
+      recoveryDayCount++;
     } else {
       days.push({ dayOfWeek: dow, type: "rest", sessions: [] });
     }
@@ -212,9 +234,6 @@ export function generatePlan(profile: UserProfile): TrainingPlan {
   const currentCpfi = calculateCpfi(resolved.currentFitness);
   const targetCpfi = getCpfiTarget(resolved.targetServiceLevel);
 
-  // Gap Analysis
-  const baseEmphasis = analyzeGaps(resolved.currentFitness, targetCpfi);
-
   // Periodization
   const macrocycles = allocatePhases(totalWeeks);
 
@@ -235,7 +254,7 @@ export function generatePlan(profile: UserProfile): TrainingPlan {
         weekNum,
         totalWeeks,
         macrocycles,
-        baseEmphasis,
+        targetCpfi,
         weakestComponents,
         currentCpfi.category,
       ),

@@ -118,7 +118,7 @@ export const exercises: Exercise[] = [
     id: "hill-sprints",
     name: "Hill Sprints",
     category: "interval_speed",
-    modality: "reps",
+    modality: "time",
     requiredEquipment: ["bodyweight"],
     muscleGroups: ["quadriceps", "hamstrings", "calves", "glutes"],
     cpfiRelevance: [
@@ -132,7 +132,7 @@ export const exercises: Exercise[] = [
     id: "stair-intervals",
     name: "Stair Intervals",
     category: "interval_speed",
-    modality: "reps",
+    modality: "time",
     requiredEquipment: ["bodyweight"],
     muscleGroups: ["quadriceps", "hamstrings", "calves", "glutes"],
     cpfiRelevance: [
@@ -534,7 +534,7 @@ export const exercises: Exercise[] = [
     name: "Battle Rope",
     category: "strength_endurance",
     modality: "time",
-    requiredEquipment: ["gym_full"],
+    requiredEquipment: ["battle_rope"],
     muscleGroups: ["shoulders", "arms", "core"],
     cpfiRelevance: [
       { component: "pushUps", transferFactor: 0.4 },
@@ -548,7 +548,7 @@ export const exercises: Exercise[] = [
     name: "Sandbag Carry",
     category: "strength_endurance",
     modality: "distance",
-    requiredEquipment: ["bodyweight"],
+    requiredEquipment: ["sandbag"],
     muscleGroups: ["traps", "core", "glutes", "quadriceps", "forearms"],
     cpfiRelevance: [
       { component: "backExtensionReps", transferFactor: 0.5 },
