@@ -1,8 +1,10 @@
 import type {
   Equipment,
   ServiceLevel,
+  TrainingBackground,
   FitnessEstimate,
   FitnessBaseline,
+  FeasibilityResult,
 } from "@intplan/core";
 import { estimateBaselines } from "@intplan/core";
 import type { ProfileState } from "../hooks/usePlan.ts";
@@ -14,6 +16,7 @@ interface Props {
   setEstimateLevel: (level: FitnessEstimate) => void;
   setOverride: (key: string, value: number | undefined) => void;
   setBaseline: (key: string, value: number) => void;
+  feasibility: FeasibilityResult | null;
 }
 
 const equipmentOptions: { value: Equipment; label: string }[] = [
@@ -45,6 +48,12 @@ const baselineFields: { key: keyof FitnessBaseline; label: string; unit: string;
   { key: "backExtensionReps", label: "Back ext. / 60s", unit: "", min: 0, max: 100 },
 ];
 
+const serviceLevelLabels: Record<ServiceLevel, string> = {
+  basic: "Basic",
+  nco: "NCO / Specialist",
+  special_forces: "Special Forces",
+};
+
 export function ParameterPanel({
   state,
   update,
@@ -52,6 +61,7 @@ export function ParameterPanel({
   setEstimateLevel,
   setOverride,
   setBaseline,
+  feasibility,
 }: Props) {
   const fi = state.fitnessInput;
   const isEstimated = fi.type === "estimated";
@@ -91,9 +101,38 @@ export function ParameterPanel({
         </label>
       </div>
 
+      {feasibility && !feasibility.feasible && (
+        <div className="feasibility-warning">
+          <div className="feasibility-warning-text">
+            Your current fitness level may need more preparation time for{" "}
+            <strong>{serviceLevelLabels[state.serviceLevel]}</strong>. The main
+            bottleneck is your <strong>{feasibility.bottleneck}</strong> — we
+            recommend at least <strong>{feasibility.recommendedWeeks} weeks</strong>{" "}
+            (you have {feasibility.availableWeeks}).
+          </div>
+          <button
+            className="feasibility-btn"
+            onClick={() => update("serviceDate", feasibility.recommendedDate)}
+          >
+            Use suggested date ({feasibility.recommendedDate})
+          </button>
+        </div>
+      )}
+
       {/* Training section */}
       <div className="panel-section">
         <div className="panel-section-title">Training</div>
+        <label className="field">
+          <span className="field-label">Training background</span>
+          <select
+            value={state.trainingBackground}
+            onChange={(e) => update("trainingBackground", e.target.value as TrainingBackground)}
+          >
+            <option value="never_trained">Never trained</option>
+            <option value="deconditioned">Trained before, currently inactive</option>
+            <option value="currently_active">Currently active</option>
+          </select>
+        </label>
         <label className="field">
           <span className="field-label">Max days / week</span>
           <select

@@ -15,6 +15,7 @@ export interface Macrocycle {
   startWeek: number;
   endWeek: number;
   description: string;
+  isTransition?: boolean;
 }
 
 export interface TrainingSession {
@@ -22,6 +23,8 @@ export interface TrainingSession {
   focus: string;
   exercises: ExercisePrescription[];
   estimatedMinutes: number;
+  warmUp?: string;
+  coolDown?: string;
 }
 
 export interface TrainingDay {
@@ -39,6 +42,8 @@ export interface WeekPlan {
   isDeload: boolean;
   trainingDays: number;
   days: TrainingDay[];
+  weeklyRunningKm?: number;
+  readinessGuidance?: string;
 }
 
 export interface TrainingPlan {

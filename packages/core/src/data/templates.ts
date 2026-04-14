@@ -91,6 +91,9 @@ export interface PrescriptionRange {
   distanceKm?: [number, number];
   intensityPercent: [number, number];
   restSeconds: [number, number];
+  rpeTarget?: [number, number];
+  timeCap?: number;
+  groundContacts?: [number, number];
 }
 
 export const defaultPrescriptionRange: PrescriptionRange = {
@@ -123,6 +126,7 @@ export const prescriptionRanges: Partial<
     reps: [12, 15],
     intensityPercent: [50, 60],
     restSeconds: [60, 90],
+    groundContacts: [20, 30],
   },
   "anatomical_adaptation:aerobic_base": {
     sets: [1, 1],
@@ -181,6 +185,7 @@ export const prescriptionRanges: Partial<
     reps: [5, 8],
     intensityPercent: [70, 85],
     restSeconds: [90, 120],
+    groundContacts: [40, 60],
   },
   "strength_build:core_strength": {
     sets: [3, 4],
@@ -207,6 +212,8 @@ export const prescriptionRanges: Partial<
     reps: [15, 25],
     intensityPercent: [50, 65],
     restSeconds: [30, 60],
+    rpeTarget: [6, 8],
+    timeCap: 15,
   },
   "strength_endurance:upper_body_strength": {
     sets: [3, 4],
@@ -219,6 +226,7 @@ export const prescriptionRanges: Partial<
     reps: [10, 15],
     intensityPercent: [60, 75],
     restSeconds: [60, 90],
+    groundContacts: [50, 70],
   },
   "strength_endurance:aerobic_base": {
     sets: [1, 1],
@@ -258,6 +266,7 @@ export const prescriptionRanges: Partial<
     reps: [3, 5],
     intensityPercent: [80, 95],
     restSeconds: [120, 180],
+    groundContacts: [40, 60],
   },
   "peaking:aerobic_base": {
     sets: [1, 1],
@@ -270,6 +279,8 @@ export const prescriptionRanges: Partial<
     reps: [12, 20],
     intensityPercent: [55, 70],
     restSeconds: [30, 60],
+    rpeTarget: [7, 9],
+    timeCap: 12,
   },
   "peaking:mental": {
     sets: [1, 1],
@@ -288,13 +299,13 @@ export const prescriptionRanges: Partial<
   "taper:aerobic_base": {
     sets: [1, 1],
     durationMinutes: [15, 25],
-    intensityPercent: [50, 60],
+    intensityPercent: [65, 75],
     restSeconds: [0, 0],
   },
   "taper:upper_body_strength": {
     sets: [2, 3],
     reps: [5, 8],
-    intensityPercent: [65, 75],
+    intensityPercent: [80, 90],
     restSeconds: [90, 120],
   },
   "taper:recovery": {

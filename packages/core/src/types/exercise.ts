@@ -40,6 +40,7 @@ export interface Exercise {
   muscleGroups: string[];
   cpfiRelevance: CpfiRelevance[];
   difficultyTier: 1 | 2 | 3;
+  isPlyometric?: boolean;
   alternatives?: string[];
 }
 
@@ -52,5 +53,9 @@ export interface ExercisePrescription {
   distanceKm?: number;
   intensityPercent: number; // 50-100
   restSeconds: number;
+  rpeTarget?: [number, number];
+  timeCap?: number;
+  groundContacts?: number;
+  loadKg?: number;
   notes?: string;
 }

@@ -5,9 +5,11 @@ import type {
   FitnessEstimate,
   Equipment,
   ServiceLevel,
+  TrainingBackground,
   TrainingPlan,
+  FeasibilityResult,
 } from "@intplan/core";
-import { generatePlan } from "@intplan/core";
+import { generatePlan, checkFeasibility, resolveBaseline } from "@intplan/core";
 
 function defaultServiceDate(): string {
   const d = new Date();
@@ -27,6 +29,7 @@ function buildProfile(state: ProfileState): UserProfile {
     maxTrainingDays: state.maxTrainingDays,
     availableEquipment: ["bodyweight" as Equipment, ...state.equipment],
     fitnessInput: state.fitnessInput,
+    trainingBackground: state.trainingBackground,
   };
 }
 
@@ -36,11 +39,13 @@ export interface ProfileState {
   maxTrainingDays: 3 | 4 | 5 | 6;
   equipment: Equipment[];
   fitnessInput: FitnessInput;
+  trainingBackground: TrainingBackground;
 }
 
 export interface PlanResult {
   plan: TrainingPlan | null;
   error: string | null;
+  feasibility: FeasibilityResult | null;
 }
 
 export function usePlan() {
@@ -50,15 +55,24 @@ export function usePlan() {
     maxTrainingDays: 4,
     equipment: [],
     fitnessInput: defaultFitnessInput,
+    trainingBackground: "deconditioned",
   });
 
   const result = useMemo<PlanResult>(() => {
     try {
       const profile = buildProfile(state);
+      const baseline = resolveBaseline(profile.fitnessInput);
+      const feasibility = checkFeasibility(
+        baseline,
+        profile.targetServiceLevel,
+        profile.serviceDate,
+        profile.trainingBackground,
+        profile.availableEquipment,
+      );
       const plan = generatePlan(profile);
-      return { plan, error: null };
+      return { plan, error: null, feasibility };
     } catch (e) {
-      return { plan: null, error: e instanceof Error ? e.message : String(e) };
+      return { plan: null, error: e instanceof Error ? e.message : String(e), feasibility: null };
     }
   }, [state]);
 

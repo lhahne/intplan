@@ -25,6 +25,8 @@ export type FitnessInput =
   | { type: "tested"; baseline: FitnessBaseline }
   | { type: "estimated"; level: FitnessEstimate; overrides?: Partial<FitnessBaseline> };
 
+export type TrainingBackground = "never_trained" | "deconditioned" | "currently_active";
+
 export interface UserProfile {
   name?: string;
   serviceDate: string; // ISO date e.g. "2027-01-08"
@@ -33,6 +35,7 @@ export interface UserProfile {
   maxTrainingDays: 3 | 4 | 5 | 6;
   availableEquipment: Equipment[];
   fitnessInput: FitnessInput;
+  trainingBackground?: TrainingBackground;
   injuries?: string[];
 }
 
@@ -44,5 +47,6 @@ export interface ResolvedProfile {
   maxTrainingDays: 3 | 4 | 5 | 6;
   availableEquipment: Equipment[];
   currentFitness: FitnessBaseline;
+  trainingBackground: TrainingBackground;
   injuries?: string[];
 }

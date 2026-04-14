@@ -4,6 +4,7 @@ export type {
   FitnessBaseline,
   FitnessEstimate,
   FitnessInput,
+  TrainingBackground,
   UserProfile,
   ResolvedProfile,
 } from "./types/profile.js";
@@ -40,3 +41,5 @@ export { resolveBaseline, resolveProfile, estimateBaselines } from "./cpfi/estim
 export { generatePlan } from "./plan/generator.js";
 export { analyzeGaps } from "./plan/gap-analysis.js";
 export { allocatePhases } from "./plan/periodization.js";
+export { checkFeasibility } from "./plan/feasibility.js";
+export type { FeasibilityResult } from "./plan/feasibility.js";

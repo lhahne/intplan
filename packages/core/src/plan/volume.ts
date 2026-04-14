@@ -72,9 +72,23 @@ export function computeTrainingDays(
   totalWeeks: number,
   maxTrainingDays: number,
   isDeload: boolean,
+  isTransition: boolean = false,
+  weekInPhase: number = 0,
 ): number {
   const base = baseDaysByFitness[fitnessCategory];
-  const phaseMult = phaseVolumeMultiplier[phase];
+
+  // Taper uses exponential volume reduction: sharp initial drop, then plateau
+  let phaseMult: number;
+  if (phase === "taper") {
+    phaseMult = weekInPhase === 0 ? 0.60 : 0.50;
+  } else {
+    phaseMult = phaseVolumeMultiplier[phase];
+  }
+
+  // Transition weeks between macrocycles get reduced volume
+  if (isTransition) {
+    phaseMult = 0.75;
+  }
 
   // Gradual ramp-up: first 3 weeks, scale from 0.75 to 1.0
   const rampUp = weekInPlan <= 2 ? 0.75 + (weekInPlan / 2) * 0.25 : 1.0;

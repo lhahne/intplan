@@ -154,4 +154,118 @@ describe("generatePlan", () => {
       generatePlan(makeProfile({ serviceDate: "2020-01-01" })),
     ).toThrow("Service date must be in the future");
   });
+
+  it("populates weeklyRunningKm on every week", () => {
+    const plan = generatePlan(makeProfile());
+    for (const week of plan.weeks) {
+      expect(week.weeklyRunningKm).toBeDefined();
+      expect(week.weeklyRunningKm).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("populates readinessGuidance on every week", () => {
+    const plan = generatePlan(makeProfile());
+    for (const week of plan.weeks) {
+      expect(week.readinessGuidance).toBeDefined();
+      expect(week.readinessGuidance!.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("training sessions have warm-up and cool-down where appropriate", () => {
+    const plan = generatePlan(makeProfile());
+    let hasWarmUp = false;
+    for (const week of plan.weeks) {
+      for (const day of week.days) {
+        for (const session of day.sessions) {
+          if (session.warmUp) hasWarmUp = true;
+        }
+      }
+    }
+    expect(hasWarmUp).toBe(true);
+  });
+
+  it("ruck exercises include loadKg", () => {
+    const future = new Date();
+    future.setFullYear(future.getFullYear() + 1);
+    const plan = generatePlan(makeProfile({
+      serviceDate: future.toISOString().split("T")[0]!,
+      maxTrainingDays: 5,
+    }));
+    let foundRuck = false;
+    for (const week of plan.weeks) {
+      for (const day of week.days) {
+        for (const session of day.sessions) {
+          if (session.category === "ruck_march") {
+            for (const ex of session.exercises) {
+              expect(ex.loadKg).toBeDefined();
+              expect(ex.loadKg).toBeGreaterThan(0);
+              foundRuck = true;
+            }
+          }
+        }
+      }
+    }
+    expect(foundRuck).toBe(true);
+  });
+
+  it("RPE targets are set for strength_endurance exercises in appropriate phases", () => {
+    const future = new Date();
+    future.setFullYear(future.getFullYear() + 1);
+    const plan = generatePlan(makeProfile({
+      serviceDate: future.toISOString().split("T")[0]!,
+    }));
+
+    let foundRpe = false;
+    for (const week of plan.weeks) {
+      if (week.phase !== "strength_endurance" && week.phase !== "peaking") continue;
+      for (const day of week.days) {
+        for (const session of day.sessions) {
+          if (session.category !== "strength_endurance") continue;
+          for (const ex of session.exercises) {
+            if (ex.rpeTarget) {
+              foundRpe = true;
+              expect(ex.rpeTarget[0]).toBeGreaterThanOrEqual(4);
+              expect(ex.rpeTarget[1]).toBeLessThanOrEqual(10);
+            }
+          }
+        }
+      }
+    }
+    expect(foundRpe).toBe(true);
+  });
+
+  it("plyometric exercises have groundContacts in strength phases", () => {
+    const future = new Date();
+    future.setFullYear(future.getFullYear() + 1);
+    const plan = generatePlan(makeProfile({
+      serviceDate: future.toISOString().split("T")[0]!,
+      maxTrainingDays: 5,
+    }));
+
+    let foundGC = false;
+    for (const week of plan.weeks) {
+      for (const day of week.days) {
+        for (const session of day.sessions) {
+          if (session.category !== "lower_body_power") continue;
+          for (const ex of session.exercises) {
+            if (ex.groundContacts) {
+              foundGC = true;
+              expect(ex.groundContacts).toBeGreaterThan(0);
+            }
+          }
+        }
+      }
+    }
+    expect(foundGC).toBe(true);
+  });
+
+  it("training background is passed through to resolved profile", () => {
+    const plan = generatePlan(makeProfile({ trainingBackground: "never_trained" }));
+    expect(plan.resolved.trainingBackground).toBe("never_trained");
+  });
+
+  it("defaults trainingBackground to deconditioned", () => {
+    const plan = generatePlan(makeProfile());
+    expect(plan.resolved.trainingBackground).toBe("deconditioned");
+  });
 });

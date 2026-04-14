@@ -34,8 +34,107 @@ const categoryLabels: Record<ExerciseCategory, string> = {
   mental: "Mental",
 };
 
+// Muscle group classification for recovery constraint
+type MuscleGroup = "upper" | "lower" | "full";
+const categoryMuscleGroup: Record<ExerciseCategory, MuscleGroup> = {
+  upper_body_strength: "upper",
+  lower_body_power: "lower",
+  ruck_march: "lower",
+  strength_endurance: "full",
+  core_strength: "full",
+  aerobic_base: "full",
+  interval_speed: "full",
+  recovery: "full",
+  mental: "full",
+};
+
 function findPhaseForWeek(macrocycles: Macrocycle[], weekNum: number): Macrocycle {
   return macrocycles.find((m) => weekNum >= m.startWeek && weekNum <= m.endWeek) ?? macrocycles[macrocycles.length - 1]!;
+}
+
+/**
+ * Warm-up suggestion based on session category.
+ */
+function sessionWarmUp(category: ExerciseCategory): string | undefined {
+  switch (category) {
+    case "aerobic_base":
+    case "interval_speed":
+      return "5 min easy walk + dynamic stretching";
+    case "upper_body_strength":
+    case "lower_body_power":
+      return "5 min light cardio + dynamic stretching + warm-up sets at 50%";
+    case "strength_endurance":
+      return "5 min jog + joint mobility";
+    case "ruck_march":
+      return "5 min easy walk + ankle/hip mobility";
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Cool-down suggestion based on session category.
+ */
+function sessionCoolDown(category: ExerciseCategory): string | undefined {
+  switch (category) {
+    case "aerobic_base":
+    case "interval_speed":
+      return "5 min walk + static stretching";
+    case "upper_body_strength":
+    case "lower_body_power":
+    case "strength_endurance":
+      return "5 min static stretching";
+    case "ruck_march":
+      return "5 min walk + foot care + stretching";
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Readiness guidance based on phase and week state.
+ */
+function getReadinessGuidance(
+  phase: string,
+  isDeload: boolean,
+  isTransition: boolean,
+): string {
+  if (isDeload) {
+    return "Planned recovery week \u2014 trust the process. Maintain movement quality, reduce effort.";
+  }
+  if (isTransition) {
+    return "Transition week between training blocks. Lighter volume to prepare for the next phase.";
+  }
+  switch (phase) {
+    case "anatomical_adaptation":
+      return "Focus on learning movement patterns. Keep effort moderate \u2014 soreness is normal but sharp pain is not.";
+    case "strength_endurance":
+      return "High-demand week. If RPE consistently exceeds targets by 2+, reduce volume 20%. Prioritize sleep.";
+    case "taper":
+      return "Taper week \u2014 you may feel restless. Maintain intensity on prescribed sessions but don\u2019t add extra work.";
+    default:
+      return "Train as prescribed. Scale back if sleep-deprived, ill, or experiencing pain beyond normal soreness.";
+  }
+}
+
+/**
+ * Calculate weekly running distance from aerobic/interval sessions.
+ */
+function calculateRunningKm(sessions: TrainingSession[]): number {
+  let totalKm = 0;
+  for (const session of sessions) {
+    if (session.category !== "aerobic_base" && session.category !== "interval_speed") continue;
+    for (const ex of session.exercises) {
+      if (ex.distanceKm) {
+        totalKm += ex.distanceKm * ex.sets;
+      } else if (ex.durationMinutes) {
+        // Estimate km from duration: ~8 min/km easy, ~5 min/km intervals
+        const paceMinPerKm = session.category === "interval_speed" ? 5 : 8;
+        totalKm += (ex.durationMinutes * ex.sets) / paceMinPerKm;
+      }
+    }
+  }
+  return Math.round(totalKm * 10) / 10;
 }
 
 function buildWeek(
@@ -46,15 +145,18 @@ function buildWeek(
   targetCpfi: ReturnType<typeof getCpfiTarget>,
   weakestComponents: ReturnType<typeof findWeakestComponents>,
   fitnessCategory: ReturnType<typeof calculateCpfi>["category"],
+  prevRunningKm: number,
 ): WeekPlan {
   const macro = findPhaseForWeek(macrocycles, weekNum);
   const phase = macro.phase;
   const weekInPhase = weekNum - macro.startWeek;
   const phaseLength = macro.endWeek - macro.startWeek + 1;
   const phaseProgress = phaseLength > 1 ? weekInPhase / (phaseLength - 1) : 0;
+  const isTransition = macro.isTransition ?? false;
 
-  // Deload every 4th week within phases > 3 weeks, skip in anatomical_adaptation
+  // Deload every 4th week within phases > 3 weeks, skip in anatomical_adaptation and taper
   const isDeload =
+    !isTransition &&
     phase !== "anatomical_adaptation" &&
     phase !== "taper" &&
     phaseLength > 3 &&
@@ -69,6 +171,8 @@ function buildWeek(
     totalWeeks,
     resolved.maxTrainingDays,
     isDeload,
+    isTransition,
+    weekInPhase,
   );
 
   // Recompute gap emphasis with phase context (peaking gets more test-specific)
@@ -110,7 +214,7 @@ function buildWeek(
       }
 
       const prescriptions = picked.map((ex) =>
-        prescribe(ex, phase, phaseProgress, isDeload),
+        prescribe(ex, phase, phaseProgress, isDeload, weekNum),
       );
 
       const totalMinutes = prescriptions.reduce(
@@ -118,16 +222,29 @@ function buildWeek(
         0,
       );
 
+      const warmUp = sessionWarmUp(cat);
+      const coolDown = sessionCoolDown(cat);
+      // Add warm-up/cool-down time (~10 min total)
+      const overheadMinutes = (warmUp ? 5 : 0) + (coolDown ? 5 : 0);
+
       sessionPool.push({
         category: cat,
         focus: categoryLabels[cat],
         exercises: prescriptions,
-        estimatedMinutes: Math.round(totalMinutes),
+        estimatedMinutes: Math.round(totalMinutes + overheadMinutes),
+        warmUp,
+        coolDown,
       });
     }
   }
 
+  // Sort sessions within pool: plyometric sessions first (for day ordering)
+  // This ensures when assigned to the same day, plyo comes before strength
+  const isPlyoSession = (s: TrainingSession) =>
+    s.category === "lower_body_power" && s.exercises.some((e) => e.groundContacts);
+
   // Assign sessions to days, spreading same-category sessions apart
+  // and respecting muscle group recovery constraints
   const trainingDays = dayPatterns[trainingDayCount] ?? dayPatterns[3]!;
   const days: TrainingDay[] = [];
   const sessionsPerDay: TrainingSession[][] = trainingDays.map(() => []);
@@ -155,11 +272,42 @@ function buildWeek(
     if (!sessions) continue;
 
     for (const session of sessions) {
+      const muscleGroup = categoryMuscleGroup[cat];
       let bestDay = 0;
       let bestScore = Infinity;
+
       for (let d = 0; d < trainingDays.length; d++) {
         const hasCategory = sessionsPerDay[d]!.some((s) => s.category === cat);
-        const score = sessionsPerDay[d]!.length + (hasCategory ? 100 : 0);
+        let score = sessionsPerDay[d]!.length + (hasCategory ? 100 : 0);
+
+        // Muscle group adjacency penalty: avoid same muscle group on consecutive days
+        if (muscleGroup !== "full") {
+          // Check previous day
+          if (d > 0) {
+            const prevHasSameGroup = sessionsPerDay[d - 1]!.some(
+              (s) => categoryMuscleGroup[s.category] === muscleGroup,
+            );
+            if (prevHasSameGroup) score += 50;
+          }
+          // Check next day
+          if (d < trainingDays.length - 1) {
+            const nextHasSameGroup = sessionsPerDay[d + 1]!.some(
+              (s) => categoryMuscleGroup[s.category] === muscleGroup,
+            );
+            if (nextHasSameGroup) score += 50;
+          }
+        }
+
+        // Ruck not adjacent to lower body power
+        if (cat === "ruck_march") {
+          if (d > 0 && sessionsPerDay[d - 1]!.some((s) => s.category === "lower_body_power")) score += 50;
+          if (d < trainingDays.length - 1 && sessionsPerDay[d + 1]!.some((s) => s.category === "lower_body_power")) score += 50;
+        }
+        if (cat === "lower_body_power") {
+          if (d > 0 && sessionsPerDay[d - 1]!.some((s) => s.category === "ruck_march")) score += 50;
+          if (d < trainingDays.length - 1 && sessionsPerDay[d + 1]!.some((s) => s.category === "ruck_march")) score += 50;
+        }
+
         if (score < bestScore) {
           bestScore = score;
           bestDay = d;
@@ -167,6 +315,19 @@ function buildWeek(
       }
       sessionsPerDay[bestDay]!.push(session);
     }
+  }
+
+  // Sort sessions within each day: plyometric before strength, recovery/mental last
+  for (const daySessions of sessionsPerDay) {
+    daySessions.sort((a, b) => {
+      const aIsPlyo = isPlyoSession(a) ? 0 : 1;
+      const bIsPlyo = isPlyoSession(b) ? 0 : 1;
+      if (aIsPlyo !== bIsPlyo) return aIsPlyo - bIsPlyo;
+      // Recovery/mental last
+      const aIsRecovery = (a.category === "recovery" || a.category === "mental") ? 1 : 0;
+      const bIsRecovery = (b.category === "recovery" || b.category === "mental") ? 1 : 0;
+      return aIsRecovery - bIsRecovery;
+    });
   }
 
   // Light activity suggestions for recovery days — rotate through these
@@ -179,7 +340,6 @@ function buildWeek(
   ];
 
   // Build all 7 days of the week
-  let recoveryDayCount = 0;
   for (let dow = 0; dow < 7; dow++) {
     const trainingDayIdx = trainingDays.indexOf(dow);
 
@@ -197,18 +357,42 @@ function buildWeek(
       days.push({ dayOfWeek: dow, type: "rest", sessions: [] });
     } else if (!trainingDays.includes(dow)) {
       // Recovery day — add a light suggestion to roughly half of them
-      // Use week + dow to create a stable but varied pattern
       const suggestionIdx = (weekNum + dow) % recoverySuggestions.length;
-      const addSuggestion = (weekNum + dow) % 3 !== 0; // skip ~1 in 3
+      const addSuggestion = (weekNum + dow) % 3 !== 0;
       days.push({
         dayOfWeek: dow,
         type: "active_recovery",
         sessions: [],
         suggestion: addSuggestion ? recoverySuggestions[suggestionIdx] : undefined,
       });
-      recoveryDayCount++;
     } else {
       days.push({ dayOfWeek: dow, type: "rest", sessions: [] });
+    }
+  }
+
+  // Calculate running volume and enforce 10% weekly increase cap
+  const allSessions = days.flatMap((d) => d.sessions);
+  let weeklyRunningKm = calculateRunningKm(allSessions);
+
+  // Enforce 10% weekly increase cap (skip week 1 and deload weeks)
+  if (prevRunningKm > 0 && weekNum > 1 && !isDeload) {
+    const maxAllowed = Math.round(prevRunningKm * 1.1 * 10) / 10;
+    if (weeklyRunningKm > maxAllowed) {
+      // Scale down aerobic/interval distances proportionally
+      const scaleFactor = maxAllowed / weeklyRunningKm;
+      for (const day of days) {
+        for (const session of day.sessions) {
+          if (session.category !== "aerobic_base" && session.category !== "interval_speed") continue;
+          for (const ex of session.exercises) {
+            if (ex.distanceKm) {
+              ex.distanceKm = Math.max(1, Math.round(ex.distanceKm * scaleFactor * 10) / 10);
+            } else if (ex.durationMinutes) {
+              ex.durationMinutes = Math.max(5, Math.round(ex.durationMinutes * scaleFactor));
+            }
+          }
+        }
+      }
+      weeklyRunningKm = maxAllowed;
     }
   }
 
@@ -218,6 +402,8 @@ function buildWeek(
     isDeload,
     trainingDays: trainingDayCount,
     days,
+    weeklyRunningKm,
+    readinessGuidance: getReadinessGuidance(phase, isDeload, isTransition),
   };
 }
 
@@ -246,19 +432,21 @@ export function generatePlan(profile: UserProfile): TrainingPlan {
 
   // Generate each week with dynamic volume
   const weeks: WeekPlan[] = [];
+  let prevRunningKm = 0;
 
   for (let weekNum = 1; weekNum <= totalWeeks; weekNum++) {
-    weeks.push(
-      buildWeek(
-        resolved,
-        weekNum,
-        totalWeeks,
-        macrocycles,
-        targetCpfi,
-        weakestComponents,
-        currentCpfi.category,
-      ),
+    const week = buildWeek(
+      resolved,
+      weekNum,
+      totalWeeks,
+      macrocycles,
+      targetCpfi,
+      weakestComponents,
+      currentCpfi.category,
+      prevRunningKm,
     );
+    prevRunningKm = week.weeklyRunningKm ?? 0;
+    weeks.push(week);
   }
 
   return {

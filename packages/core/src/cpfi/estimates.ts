@@ -82,6 +82,7 @@ export function resolveProfile(profile: UserProfile): ResolvedProfile {
     maxTrainingDays: profile.maxTrainingDays,
     availableEquipment: profile.availableEquipment,
     currentFitness: resolveBaseline(profile.fitnessInput),
+    trainingBackground: profile.trainingBackground ?? "deconditioned",
     injuries: profile.injuries,
   };
 }
