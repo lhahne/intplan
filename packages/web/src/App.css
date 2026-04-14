@@ -751,3 +751,36 @@ select:focus {
     grid-column: 1 / -1;
   }
 }
+
+/* Feasibility warning */
+.feasibility-warning {
+  margin: 0 0 4px;
+  padding: 10px 12px;
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.feasibility-warning-text {
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.feasibility-btn {
+  display: inline-block;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #0f1117;
+  background: var(--warning);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.feasibility-btn:hover {
+  opacity: 0.85;
+}

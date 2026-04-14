@@ -12,6 +12,7 @@ export function App() {
     setBaseline,
     plan,
     error,
+    feasibility,
   } = usePlan();
 
   return (
@@ -29,6 +30,7 @@ export function App() {
             setEstimateLevel={setEstimateLevel}
             setOverride={setOverride}
             setBaseline={setBaseline}
+            feasibility={feasibility}
           />
         </aside>
         <section className="content">
