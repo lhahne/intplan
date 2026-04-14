@@ -1,0 +1,23 @@
+{
+  "name": "@intplan/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "intplan": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@intplan/core": "workspace:*",
+    "@inquirer/prompts": "^7.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "vitest": "^3.0.0"
+  }
+}

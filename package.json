@@ -1,0 +1,9 @@
+{
+  "name": "intplan",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter @intplan/cli dev",
+    "test": "pnpm -r test"
+  }
+}
