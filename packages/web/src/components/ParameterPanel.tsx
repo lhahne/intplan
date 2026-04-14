@@ -21,7 +21,7 @@ const equipmentOptions: { value: Equipment; label: string }[] = [
   { value: "dumbbells", label: "Dumbbells" },
   { value: "barbell", label: "Barbell + rack" },
   { value: "kettlebell", label: "Kettlebell" },
-  { value: "resistance_bands", label: "Resistance bands" },
+  { value: "resistance_bands", label: "Bands" },
   { value: "bench", label: "Bench" },
   { value: "sandbag", label: "Sandbag" },
   { value: "battle_rope", label: "Battle rope" },
@@ -66,66 +66,80 @@ export function ParameterPanel({
     <div className="panel">
       <h2>Parameters</h2>
 
-      <label className="field">
-        <span className="field-label">Service date</span>
-        <input
-          type="date"
-          value={state.serviceDate}
-          min={new Date().toISOString().split("T")[0]}
-          onChange={(e) => update("serviceDate", e.target.value)}
-        />
-      </label>
+      {/* Service section */}
+      <div className="panel-section">
+        <div className="panel-section-title">Service</div>
+        <label className="field">
+          <span className="field-label">Service date</span>
+          <input
+            type="date"
+            value={state.serviceDate}
+            min={new Date().toISOString().split("T")[0]}
+            onChange={(e) => update("serviceDate", e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span className="field-label">Service level</span>
+          <select
+            value={state.serviceLevel}
+            onChange={(e) => update("serviceLevel", e.target.value as ServiceLevel)}
+          >
+            <option value="basic">Basic (6 months)</option>
+            <option value="nco">NCO / Specialist (9-12 months)</option>
+            <option value="special_forces">Special Forces (12 months)</option>
+          </select>
+        </label>
+      </div>
 
-      <label className="field">
-        <span className="field-label">Service level</span>
-        <select
-          value={state.serviceLevel}
-          onChange={(e) => update("serviceLevel", e.target.value as ServiceLevel)}
-        >
-          <option value="basic">Basic (6 months)</option>
-          <option value="nco">NCO / Specialist (9-12 months)</option>
-          <option value="special_forces">Special Forces (12 months)</option>
-        </select>
-      </label>
+      {/* Training section */}
+      <div className="panel-section">
+        <div className="panel-section-title">Training</div>
+        <label className="field">
+          <span className="field-label">Max days / week</span>
+          <select
+            value={state.maxTrainingDays}
+            onChange={(e) =>
+              update("maxTrainingDays", Number(e.target.value) as 3 | 4 | 5 | 6)
+            }
+          >
+            <option value="3">3 days</option>
+            <option value="4">4 days</option>
+            <option value="5">5 days</option>
+            <option value="6">6 days</option>
+          </select>
+        </label>
+        <fieldset className="field">
+          <legend className="field-label">Equipment</legend>
+          <div className="equipment-grid">
+            {equipmentOptions.map((eq) => {
+              const checked = state.equipment.includes(eq.value);
+              return (
+                <label
+                  key={eq.value}
+                  className={`equipment-chip${checked ? " selected" : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => {
+                      const next = e.target.checked
+                        ? [...state.equipment, eq.value]
+                        : state.equipment.filter((x) => x !== eq.value);
+                      update("equipment", next);
+                    }}
+                  />
+                  <span className="chip-check">{checked ? "\u2713" : ""}</span>
+                  {eq.label}
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+      </div>
 
-      <label className="field">
-        <span className="field-label">Max training days / week</span>
-        <select
-          value={state.maxTrainingDays}
-          onChange={(e) =>
-            update("maxTrainingDays", Number(e.target.value) as 3 | 4 | 5 | 6)
-          }
-        >
-          <option value="3">3 days</option>
-          <option value="4">4 days</option>
-          <option value="5">5 days</option>
-          <option value="6">6 days</option>
-        </select>
-      </label>
-
-      <fieldset className="field">
-        <legend className="field-label">Equipment</legend>
-        <div className="checkbox-group">
-          {equipmentOptions.map((eq) => (
-            <label key={eq.value} className="checkbox-item">
-              <input
-                type="checkbox"
-                checked={state.equipment.includes(eq.value)}
-                onChange={(e) => {
-                  const next = e.target.checked
-                    ? [...state.equipment, eq.value]
-                    : state.equipment.filter((x) => x !== eq.value);
-                  update("equipment", next);
-                }}
-              />
-              {eq.label}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      <fieldset className="field">
-        <legend className="field-label">Current fitness</legend>
+      {/* Fitness section */}
+      <div className="panel-section">
+        <div className="panel-section-title">Current Fitness</div>
         <div className="fitness-mode">
           <label className={`mode-btn ${isEstimated ? "active" : ""}`}>
             <input
@@ -155,18 +169,19 @@ export function ParameterPanel({
         </div>
 
         {isEstimated ? (
-          <div className="estimate-section">
-            <select
-              value={estimateLevel}
-              onChange={(e) => setEstimateLevel(e.target.value as FitnessEstimate)}
-              className="estimate-select"
-            >
+          <>
+            <div className="level-cards">
               {estimateLevels.map((l) => (
-                <option key={l.value} value={l.value}>
-                  {l.label} - {l.desc}
-                </option>
+                <div
+                  key={l.value}
+                  className={`level-card${estimateLevel === l.value ? " selected" : ""}`}
+                  onClick={() => setEstimateLevel(l.value)}
+                >
+                  <div className="level-card-name">{l.label}</div>
+                  <div className="level-card-desc">{l.desc}</div>
+                </div>
               ))}
-            </select>
+            </div>
 
             {estimateBase && (
               <div className="estimate-preview">
@@ -194,7 +209,7 @@ export function ParameterPanel({
                 })}
               </div>
             )}
-          </div>
+          </>
         ) : (
           <div className="tested-section">
             {baselineFields.map((f) => (
@@ -212,7 +227,7 @@ export function ParameterPanel({
             ))}
           </div>
         )}
-      </fieldset>
+      </div>
     </div>
   );
 }

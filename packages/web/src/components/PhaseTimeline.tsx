@@ -21,9 +21,10 @@ const phaseColors: Record<string, string> = {
 interface Props {
   macrocycles: Macrocycle[];
   totalWeeks: number;
+  onPhaseClick?: (startWeek: number) => void;
 }
 
-export function PhaseTimeline({ macrocycles, totalWeeks }: Props) {
+export function PhaseTimeline({ macrocycles, totalWeeks, onPhaseClick }: Props) {
   return (
     <div className="phase-timeline">
       {macrocycles.map((m) => {
@@ -38,6 +39,7 @@ export function PhaseTimeline({ macrocycles, totalWeeks }: Props) {
               backgroundColor: phaseColors[m.phase] ?? "#6b7280",
             }}
             title={`${m.description} (W${m.startWeek}-${m.endWeek})`}
+            onClick={() => onPhaseClick?.(m.startWeek)}
           >
             {pct > 8 && (
               <span className="phase-label">

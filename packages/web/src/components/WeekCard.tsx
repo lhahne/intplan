@@ -27,43 +27,35 @@ function formatExercise(ex: ExercisePrescription): string {
   return `${ex.sets} sets`;
 }
 
-function DayBox({ day }: { day: TrainingDay }) {
+function DayRow({ day }: { day: TrainingDay }) {
   const name = dayNames[day.dayOfWeek] ?? "???";
-
-  if (day.type === "rest") {
-    return (
-      <div className="day-box rest">
-        <span className="day-name">{name}</span>
-        <span className="day-type-label">Rest</span>
-      </div>
-    );
-  }
 
   if (day.type === "active_recovery") {
     return (
-      <div className="day-box recovery">
-        <span className="day-name">{name}</span>
-        <span className="day-type-label">Recovery</span>
-        {day.suggestion && (
-          <span className="day-suggestion">{day.suggestion}</span>
-        )}
+      <div className="day-row recovery">
+        <span className="day-row-name">{name}</span>
+        <span className="day-row-focus">Recovery</span>
+        <span className="day-row-suggestion">{day.suggestion ?? "Light activity"}</span>
       </div>
     );
   }
 
+  const exercises = day.sessions.flatMap((s) => s.exercises);
+
   return (
-    <div className="day-box training">
-      <span className="day-name">{name}</span>
-      <span className="day-focus">{day.focus}</span>
-      <div className="exercises">
-        {day.sessions.flatMap((s) =>
-          s.exercises.map((ex) => (
-            <div key={ex.exerciseId + s.category} className="exercise">
-              <span className="exercise-name">{ex.exerciseName}</span>
-              <span className="exercise-detail">{formatExercise(ex)}</span>
-            </div>
-          )),
-        )}
+    <div className="day-row training">
+      <span className="day-row-name">{name}</span>
+      <span className="day-row-focus">{day.focus}</span>
+      <div className="day-row-exercises">
+        {exercises.map((ex, i) => (
+          <span key={ex.exerciseId + i}>
+            {i > 0 && <span className="exercise-separator">&middot;</span>}
+            <span className="exercise-inline">
+              {ex.exerciseName}{" "}
+              <span className="exercise-inline-detail">{formatExercise(ex)}</span>
+            </span>
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -71,27 +63,45 @@ function DayBox({ day }: { day: TrainingDay }) {
 
 interface Props {
   week: WeekPlan;
+  expanded: boolean;
+  onToggle: () => void;
 }
 
-export function WeekCard({ week }: Props) {
+export function WeekCard({ week, expanded, onToggle }: Props) {
   const label = phaseLabels[week.phase] ?? week.phase;
   const color = phaseColors[week.phase] ?? "#6b7280";
 
+  const activeDays = week.days.filter((d) => d.type !== "rest");
+  const restDayNames = week.days
+    .filter((d) => d.type === "rest")
+    .map((d) => dayNames[d.dayOfWeek])
+    .join(", ");
+
   return (
-    <div className="week-card">
-      <div className="week-header" style={{ borderLeftColor: color }}>
+    <div className="week-card" id={`week-${week.weekNumber}`}>
+      <div
+        className="week-header"
+        style={{ borderLeftColor: color }}
+        onClick={onToggle}
+      >
+        <span className={`week-chevron${expanded ? " expanded" : ""}`}>&#9654;</span>
         <span className="week-number">Week {week.weekNumber}</span>
         <span className="week-phase" style={{ color }}>{label}</span>
         <span className="week-meta">
           {week.trainingDays}d
+          {restDayNames && (
+            <span className="rest-days-label">Rest: {restDayNames}</span>
+          )}
           {week.isDeload && <span className="deload-badge">DELOAD</span>}
         </span>
       </div>
-      <div className="week-days-grid">
-        {week.days.map((day) => (
-          <DayBox key={day.dayOfWeek} day={day} />
-        ))}
-      </div>
+      {expanded && (
+        <div className="week-days-list">
+          {activeDays.map((day) => (
+            <DayRow key={day.dayOfWeek} day={day} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
